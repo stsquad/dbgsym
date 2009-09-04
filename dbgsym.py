@@ -3,6 +3,9 @@
 # Check debug symbol files for inconsistency between their CRC and
 # what the parent library thinks it's debug libraries CRC should be.
 #
+# (C)opyright Alex Bennee (alex@bennee.com).
+# License: GPLv3 (or later)
+#
 
 import os
 import binascii
