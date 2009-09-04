@@ -9,6 +9,7 @@ import binascii
 import re
 import commands
 import string
+import getopt,sys
 
 debug_path="/usr/lib/debug"
 
@@ -50,7 +51,26 @@ def check_dir(dir):
             check_dir(path)
         else:
             process_debug_file(path)
-    
 
-check_dir(debug_path)
+def usage():
+    print "dbgsym.py [-d|--debug_root=/path/to/debug/dir] [-f|--file=/path/to/debug/file]"
+    sys.exit(1)
+            
+# Start of code
+if __name__ == "__main__":
+    try:
+        opts, args = getopt.getopt(sys.argv[1:], "d:f:", ["debug_root=", "file="])
+    except getopt.GetoptError, err:
+        usage()
+
+    for o,a in opts:
+        if o in ("-d", "--debug_root"):
+            debug_path=a
+        if o in ("-f", "--file"):
+            # do one file
+            process_debug_file(a)
+            exit(0)
+
+    # Start going through the debug dir
+    check_dir(debug_path)
 
