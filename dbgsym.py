@@ -12,8 +12,9 @@ import string
 import getopt,sys
 
 debug_path="/usr/lib/debug"
+try_alt=False
 
-def compare_crcs(debug_file, actual_file):
+def compare_crcs(debug_file, actual_file, verbose=False):
     # Calculate the CRC of the debug file
     data = open(debug_file).read()
     debug_crc = binascii.crc32(data)
@@ -31,9 +32,10 @@ def compare_crcs(debug_file, actual_file):
     real_crc = string.atol(''.join(swap_crc), 16)
 
     # Finally complain if the CRCs do not match
-    if real_crc != debug_crc:
+    if (real_crc != debug_crc) or verbose:
         print "debug_file: %s has CRC of %X" % (debug_file, debug_crc)
         print "actual_file: %s thinks CRC should be %X" % (actual_file, real_crc)
+        
     
 
 def process_debug_file(debug_file):
@@ -43,6 +45,12 @@ def process_debug_file(debug_file):
         compare_crcs(debug_file, target_file)
     else:
         print "couldn't find paired library for: %s" % (debug_file)
+        if try_alt:
+            # try alternatives, this is usually something like /usr/lib/debug/file.so
+            for f in ("/lib"+target_file, "/usr/lib"+target_file, "/usr/bin"+target_file):
+                if os.path.isfile(f):
+                    print "trying alt: %s" % (f)
+                    compare_crcs(debug_file, f, True)
 
 def check_dir(dir):
     for e in os.listdir(dir):
@@ -53,17 +61,22 @@ def check_dir(dir):
             process_debug_file(path)
 
 def usage():
-    print "dbgsym.py [-d|--debug_root=/path/to/debug/dir] [-f|--file=/path/to/debug/file]"
+    print "dbgsym.py [-a] [-d|--debug_root=/path/to/debug/dir] [-f|--file=/path/to/debug/file]"
+    print "  -a,               : try alternate paths if matching library not found"
+    print "  -d, --debug_root  : use different root (default %s)" % (debug_path)
+    print "  -f, --file        : just check one debug file"
     sys.exit(1)
             
 # Start of code
 if __name__ == "__main__":
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "d:f:", ["debug_root=", "file="])
+        opts, args = getopt.getopt(sys.argv[1:], "ad:f:", ["debug_root=", "file="])
     except getopt.GetoptError, err:
         usage()
 
     for o,a in opts:
+        if o in ("-a"):
+            try_alt=True
         if o in ("-d", "--debug_root"):
             debug_path=a
         if o in ("-f", "--file"):
