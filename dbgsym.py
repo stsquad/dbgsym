@@ -19,7 +19,12 @@ try_alt=False
 
 def compare_crcs(debug_file, actual_file, verbose=False):
     # Calculate the CRC of the debug file
-    data = open(debug_file).read()
+    try:
+        data = open(debug_file).read()
+    except:
+        print "debug_file: couldn't read %s" % (debug_file)
+        return
+    
     debug_crc = binascii.crc32(data)
     debug_crc = debug_crc % 2**32  # force to be signed
 
@@ -28,7 +33,13 @@ def compare_crcs(debug_file, actual_file, verbose=False):
 
     # The last 8 hex digits are the (byte reversed) CRC
     bytes = re.findall("[0-9a-f]{8}", obj_output)
-    obj_crc = bytes[len(bytes)-1] # I'm sure there is a more concise way
+
+    try:
+        obj_crc = bytes[len(bytes)-1] # I'm sure there is a more concise way
+    except:
+        print "failed to extract CRC for %s" % (actual_file)
+        return
+    
     swap_crc=[]
     for i in range(0, len(obj_crc), 2):
         swap_crc.insert(0, obj_crc[i:i+2])
