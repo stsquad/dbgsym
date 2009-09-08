@@ -44,6 +44,9 @@ def compare_crcs(debug_file, actual_file, verbose=False):
 def process_debug_file(debug_file):
     # We now need to calculate the path the debug library is refering to
     target_file = re.sub(debug_path, "", debug_file)
+    # Fedora adds a .debug sufix so we should strip them
+    target_file = re.sub(".debug$", "", target_file)
+
     if os.path.isfile(target_file):
         compare_crcs(debug_file, target_file)
     else:
