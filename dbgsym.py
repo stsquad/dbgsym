@@ -16,6 +16,21 @@ import getopt,sys
 
 debug_path="/usr/lib/debug"
 try_alt=False
+show_package=False
+
+dpkg_count={}
+pkg_count={}
+
+def tally_package(debug_file, actual_file):
+    # Assume RPM for now
+    dpkg_output = commands.getoutput("rpm -qf "+debug_file)
+    pkg_output = commands.getoutput("rpm -qf "+actual_file)
+
+    try:
+        dpkg_count[dpkg_output] += 1
+    except KeyError:
+        dpkg_count[dpkg_output] = 1
+        
 
 def compare_crcs(debug_file, actual_file, verbose=False):
     # Calculate the CRC of the debug file
@@ -46,9 +61,11 @@ def compare_crcs(debug_file, actual_file, verbose=False):
     real_crc = string.atol(''.join(swap_crc), 16)
 
     # Finally complain if the CRCs do not match
-    if (real_crc != debug_crc) or verbose:
+    if (real_crc != debug_crc):
         print "debug_file: %s has CRC of %X" % (debug_file, debug_crc)
         print "actual_file: %s thinks CRC should be %X" % (actual_file, real_crc)
+        if show_package:
+            tally_package(debug_file, actual_file)
         
     
 
@@ -61,7 +78,7 @@ def process_debug_file(debug_file):
     if os.path.isfile(target_file):
         compare_crcs(debug_file, target_file)
     else:
-        print "couldn't find paired library for: %s" % (debug_file)
+        # print "couldn't find paired library for: %s" % (debug_file)
         if try_alt:
             # try alternatives, this is usually something like /usr/lib/debug/file.so
             for f in ("/lib"+target_file, "/usr/lib"+target_file, "/usr/bin"+target_file):
@@ -82,18 +99,22 @@ def usage():
     print "  -a,               : try alternate paths if matching library not found"
     print "  -d, --debug_root  : use different root (default %s)" % (debug_path)
     print "  -f, --file        : just check one debug file"
+    print "  -p                : determine packages"
+    
     sys.exit(1)
             
 # Start of code
 if __name__ == "__main__":
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "ad:f:", ["debug_root=", "file="])
+        opts, args = getopt.getopt(sys.argv[1:], "pad:f:", ["debug_root=", "file="])
     except getopt.GetoptError, err:
         usage()
 
     for o,a in opts:
         if o in ("-a"):
             try_alt=True
+        if o in ("-p"):
+            show_package=True
         if o in ("-d", "--debug_root"):
             debug_path=a
         if o in ("-f", "--file"):
@@ -104,3 +125,7 @@ if __name__ == "__main__":
     # Start going through the debug dir
     check_dir(debug_path)
 
+    if show_package:
+        print "\nPackage Summary:"
+        for p, c in dpkg_count.iteritems():
+            print "%s (%d files)" % (p, c)
